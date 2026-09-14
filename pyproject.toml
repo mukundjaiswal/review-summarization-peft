@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "review-summarization-peft"
+version = "0.1.0"
+description = "QLoRA fine-tuning for customer review classification and summarization, with a controlled base-versus-tuned comparison on a held-out set."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Mukund Jaiswal" }]
+keywords = ["peft", "qlora", "fine-tuning", "summarization", "evaluation"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    # Shared evaluation harness, also used by my RAG and classification
+    # projects. Install it first: from git, or `pip install -e ../eval-harness`
+    # when working on both side by side.
+    "eval-harness>=0.1.0,<0.2",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "scikit-learn>=1.4",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+# The training and inference stack. Optional so the test suite installs in
+# seconds and CI needs no GPU.
+train = [
+    "torch>=2.3",
+    "transformers>=4.41",
+    "datasets>=2.19",
+    "trl>=0.9",
+    "peft>=0.11",
+    "accelerate>=0.30",
+    "bitsandbytes>=0.43",
+]
+# Reference-based scoring. Heavy; only needed to score summaries.
+scoring = ["evaluate>=0.4", "bert-score>=0.3.13"]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "mypy>=1.10",
+    "ruff>=0.6",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+review-peft = "review_peft.cli:app"
+
+[project.urls]
+Repository = "https://github.com/mukundjaiswal/review-summarization-peft"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/review_peft"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+markers = ["gpu: needs a GPU and the 'train' extra"]
+
+[tool.coverage.run]
+source = ["review_peft"]
+branch = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "BLE", "SIM", "RUF", "ANN", "D"]
+ignore = ["D100", "D104", "ANN401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["review_peft"]
+known-third-party = ["eval_harness"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["review_peft"]
+mypy_path = "src"
+strict = true
+warn_unreachable = true
+disallow_untyped_defs = true
+no_implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*", "transformers.*", "datasets.*", "trl.*", "peft.*",
+    "unsloth.*", "evaluate.*", "sklearn.*",
+]
+ignore_missing_imports = true
